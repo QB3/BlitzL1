@@ -329,6 +329,10 @@ namespace BlitzL1
         - actual_grad = grad of datafit
         - approximate_grad = grad of the quadratic approximation
 
+
+        Note: 
+          the more we get close to the sol the more actual_grad == approximate_grad
+
       ======================================================================================== */
       size_t j = prioritized_features[ind];
       const Column *col = data->get_column(j);
