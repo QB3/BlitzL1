@@ -15,6 +15,36 @@ using std::min;
 using std::swap;
 using std::vector;
 
+/* ==================================================================================
+  
+  Blitz Log reg in a nutshell 
+  ===========================
+
+  problems
+  --------
+  solve the prob with y, A (response, design matrix) 
+
+  \min_x \sum_i \log(1 + e^(-y_i (Ax)_i)) + \lambda \sum_j |x_j|
+  
+
+  code notations
+  ---------------
+  - label == y (response)
+  - Ax == design_matrix @ coefs
+  - aux_dual[i] == e^(-y_i (Ax)_i)
+  - theta == grad vector (first derivatives): -label[i] * aux_dual[i] / (1 + aux_dual[i])
+  - H == hessian == diag matrix  (second derivatives)
+
+
+  Later notation
+  --------------
+  \min_x \sum_i \log(1 + e^(-y_i (Ax)_i)) + \lambda \sum_j |x_j|
+
+  <==>
+
+  \min_x F(A x) + \lambda || x ||_1
+===================================================================================== */
+
 namespace BlitzL1
 {
 
@@ -148,7 +178,7 @@ namespace BlitzL1
       for (size_t ind = 0; ind < working_set_size; ++ind)
       {
         size_t j = prioritized_features[ind];
-        prox_newton_grad_cache[ind] = data->get_column(j)->inner_product(theta);
+        prox_newton_grad_cache[ind] = data->get_column(j)->inner_product(theta);  // X[:, j].T @ grad 
       }
     }
     else
@@ -208,6 +238,10 @@ namespace BlitzL1
         add_scaler(A_Delta_x, diff);
       }
 
+      /*
+        criterion based on a fixed point
+        Q: Why multiply by hess ** 2 (cf. L228)
+      */
       if (sum_sq_hess_diff < prox_newton_epsilon && cd_itr + 1 >= MIN_PROX_NEWTON_CD_ITR)
       {
         break;
@@ -219,6 +253,27 @@ namespace BlitzL1
     value_t last_t = 0.0;
     for (int backtrack_itr = 0; backtrack_itr < MAX_BACKTRACK_ITR; ++backtrack_itr)
     {
+      /* =====================================================================================
+      
+        update divide t by 2 until condition met:
+
+        F(A x) + \lambda || x ||_1 < F(A (x - t \Delta x)) + \lambda || x - t \Delta x ||_1
+
+        <==> (approximately)
+
+        t \nabla F A \Delta x + \lambda (|| x ||_1 - || x - t \Delta x ||_1) < 0
+
+        <==> (Blitz considers x and x - t \Delta x have the same sign)
+          
+        t \nabla F @ A \Delta x + t \lambda t  sum_sign(\Delta x) < 0
+
+        <==> (get ride of t since it positive)
+
+        subgrad_t == \nabla F @ A \Delta x + t \lambda t  sum_sign(\Delta x) 
+
+        subgrad_t < 0
+
+      ======================================================================================== */
       value_t diff_t = t - last_t;
 
       intercept += diff_t * Delta_intercept;
@@ -240,7 +295,7 @@ namespace BlitzL1
         Ax[i] += diff_t * A_Delta_x[i];
       }
 
-      loss_function->compute_dual_points(Ax, theta, aux_dual, data);
+      loss_function->compute_dual_points(Ax, theta, aux_dual, data); // compute grad at new x (stored in theta)
       subgrad_t += inner_product(A_Delta_x, theta);
 
       if (subgrad_t < 0)
@@ -267,6 +322,14 @@ namespace BlitzL1
     }
     for (size_t ind = 0; ind < working_set_size; ++ind)
     {
+      /* =====================================================================================
+        prox_newton_grad_diff = norm(actual_grad -  approximate_grad, ord=2) ** 2
+
+        where:
+        - actual_grad = grad of datafit
+        - approximate_grad = grad of the quadratic approximation
+
+      ======================================================================================== */
       size_t j = prioritized_features[ind];
       const Column *col = data->get_column(j);
       value_t actual_grad = col->inner_product(theta);
