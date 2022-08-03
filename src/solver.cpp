@@ -585,6 +585,7 @@ namespace BlitzL1
       primal_obj = primal_loss + l1_penalty;
       duality_gap = primal_obj - dual_obj;
 
+      cout << primal_obj << endl;
       // Print/record results:
       double elapsed_time = timer.elapsed_time();
       timer.pause_timing();
