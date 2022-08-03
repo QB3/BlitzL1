@@ -190,16 +190,16 @@ namespace BlitzL1
     for (int cd_itr = 0; cd_itr < max_cd_itr; ++cd_itr)
     {
 
-      // Shuffle indices:
-      random_shuffle(rand_permutation.begin(), rand_permutation.end());
-      for (size_t rp_ind = 0; rp_ind < working_set_size; ++rp_ind)
-      {
-        size_t new_index = rand_permutation[rp_ind];
-        swap(prioritized_features[rp_ind], prioritized_features[new_index]);
-        swap(Delta_x[rp_ind], Delta_x[new_index]);
-        swap(prox_newton_grad_cache[rp_ind], prox_newton_grad_cache[new_index]);
-        swap(hess_cache[rp_ind], hess_cache[new_index]);
-      }
+      // // Shuffle indices:
+      // random_shuffle(rand_permutation.begin(), rand_permutation.end());
+      // for (size_t rp_ind = 0; rp_ind < working_set_size; ++rp_ind)
+      // {
+      //   size_t new_index = rand_permutation[rp_ind];
+      //   swap(prioritized_features[rp_ind], prioritized_features[new_index]);
+      //   swap(Delta_x[rp_ind], Delta_x[new_index]);
+      //   swap(prox_newton_grad_cache[rp_ind], prox_newton_grad_cache[new_index]);
+      //   swap(hess_cache[rp_ind], hess_cache[new_index]);
+      // }
 
       // Compute newton direction using coordinate descent:
       value_t sum_sq_hess_diff = 0.0;
@@ -251,10 +251,10 @@ namespace BlitzL1
     // Apply update with backtracking:
     value_t t = 1.0;
     value_t last_t = 0.0;
-    int count_backtack = 0;
+    // int count_backtack = 0;
     for (int backtrack_itr = 0; backtrack_itr < MAX_BACKTRACK_ITR; ++backtrack_itr)
     {
-      count_backtack += 1;
+      // count_backtack += 1;
       /* =====================================================================================
       
         update divide t by 2 until condition met:
@@ -311,7 +311,7 @@ namespace BlitzL1
       }
     }
 
-    cout << "Backtrack iter " << count_backtack << endl;
+    // cout << "Backtrack iter " << count_backtack << endl;
 
     // Update intercept exactly:
     value_t delta_intercept = update_intercept(intercept, loss_function, data);
@@ -555,11 +555,11 @@ namespace BlitzL1
 
       // Solve subproblem:
       value_t epsilon = 0.3;
-      int counter = 0;
+      // int counter = 0;
       reset_prox_newton_variables();
       while (true)
       {
-        counter += 1;
+        //counter += 1;
         value_t last_subproblem_obj = primal_obj;
         theta_scale = run_prox_newton_iteration(
             x, intercept, lambda, loss_function, data);
@@ -578,7 +578,7 @@ namespace BlitzL1
           break;
       }
 
-      cout << "Iter " << iter << ": n_epochs : " << counter << endl;
+      // cout << "Iter " << iter << ": n_epochs : " << counter << endl;
 
       primal_loss = loss_function->primal_loss(theta, aux_dual, data);
       l1_penalty = lambda * l1_norm(x, d);
