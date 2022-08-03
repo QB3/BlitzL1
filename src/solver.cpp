@@ -251,8 +251,10 @@ namespace BlitzL1
     // Apply update with backtracking:
     value_t t = 1.0;
     value_t last_t = 0.0;
+    int count_backtack = 0;
     for (int backtrack_itr = 0; backtrack_itr < MAX_BACKTRACK_ITR; ++backtrack_itr)
     {
+      count_backtack += 1;
       /* =====================================================================================
       
         update divide t by 2 until condition met:
@@ -308,6 +310,8 @@ namespace BlitzL1
         t *= 0.5;
       }
     }
+
+    cout << "Backtrack iter " << count_backtack << endl;
 
     // Update intercept exactly:
     value_t delta_intercept = update_intercept(intercept, loss_function, data);
@@ -551,9 +555,11 @@ namespace BlitzL1
 
       // Solve subproblem:
       value_t epsilon = 0.3;
+      int counter = 0;
       reset_prox_newton_variables();
       while (true)
       {
+        counter += 1;
         value_t last_subproblem_obj = primal_obj;
         theta_scale = run_prox_newton_iteration(
             x, intercept, lambda, loss_function, data);
@@ -571,6 +577,8 @@ namespace BlitzL1
         if (primal_obj >= last_subproblem_obj)
           break;
       }
+
+      cout << "Iter " << iter << ": n_epochs : " << counter << endl;
 
       primal_loss = loss_function->primal_loss(theta, aux_dual, data);
       l1_penalty = lambda * l1_norm(x, d);
