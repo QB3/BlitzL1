@@ -535,8 +535,8 @@ namespace BlitzL1
 
       // logs primal and dual obj
       cout << "Iter " << iter       << " "
-           << "p obj" << primal_obj << " "
-           << "d obj" << dual_obj   << endl;
+           << "p obj " << primal_obj << " "
+           << "d obj " << dual_obj   << endl;
 
       // Determine working set size:
       working_set_size = 2 * l0_norm(x, d);
