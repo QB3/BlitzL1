@@ -533,6 +533,11 @@ namespace BlitzL1
       value_t dual_obj = loss_function->dual_obj(phi, data);
       duality_gap = primal_obj - dual_obj;
 
+      // logs primal and dual obj
+      cout << "Iter " << iter       << " "
+           << "p obj" << primal_obj << " "
+           << "d obj" << dual_obj   << endl;
+
       // Determine working set size:
       working_set_size = 2 * l0_norm(x, d);
       if (working_set_size < 100)
