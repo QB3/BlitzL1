@@ -536,7 +536,8 @@ namespace BlitzL1
       // logs primal and dual obj
       cout << "Iter " << iter
            << " p obj " << primal_obj
-           << " d obj " << dual_obj   << endl;
+           << " d obj " << dual_obj   
+           << " gap "  << dual_obj << endl;
 
       // Determine working set size:
       working_set_size = 2 * l0_norm(x, d);
@@ -559,13 +560,14 @@ namespace BlitzL1
         working_set_size = prioritized_features.size();
 
       // log size and ws
+      cout << "threshold " << thresh << endl;
       cout << "ws size: " << working_set_size << endl;
       cout << "ws:";
       for(int j=0; j < working_set_size; j++) {
         cout << " " << prioritized_features[j];
       }
       cout << endl;
-      
+
       // Solve subproblem:
       value_t epsilon = 0.3;
       // int counter = 0;
