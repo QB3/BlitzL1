@@ -534,9 +534,9 @@ namespace BlitzL1
       duality_gap = primal_obj - dual_obj;
 
       // logs primal and dual obj
-      cout << "Iter " << iter       << " "
-           << "p obj " << primal_obj << " "
-           << "d obj " << dual_obj   << endl;
+      cout << "Iter " << iter
+           << " p obj " << primal_obj
+           << " d obj " << dual_obj   << endl;
 
       // Determine working set size:
       working_set_size = 2 * l0_norm(x, d);
@@ -557,6 +557,13 @@ namespace BlitzL1
           prioritized_features.end());
       if (working_set_size > prioritized_features.size())
         working_set_size = prioritized_features.size();
+
+      // log size and ws
+      cout << "ws size: " << working_set_size << endl;
+      cout << "ws:";
+      for(int j=0; j < working_set_size; j++) {
+        cout << " " << prioritized_features[j];
+      }
 
       // Solve subproblem:
       value_t epsilon = 0.3;
