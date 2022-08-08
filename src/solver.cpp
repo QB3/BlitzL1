@@ -564,7 +564,8 @@ namespace BlitzL1
       for(int j=0; j < working_set_size; j++) {
         cout << " " << prioritized_features[j];
       }
-
+      cout << endl;
+      
       // Solve subproblem:
       value_t epsilon = 0.3;
       // int counter = 0;
