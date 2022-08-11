@@ -533,11 +533,11 @@ namespace BlitzL1
       value_t dual_obj = loss_function->dual_obj(phi, data);
       duality_gap = primal_obj - dual_obj;
 
-      // logs primal and dual obj
-      cout << "Iter " << iter
-           << " p obj " << primal_obj
-           << " d obj " << dual_obj   
-           << " gap "  << dual_obj << endl;
+      // // logs primal and dual obj
+      // cout << "Iter " << iter
+      //      << " p obj " << primal_obj
+      //      << " d obj " << dual_obj   
+      //      << " gap "  << dual_obj << endl;
 
       // Determine working set size:
       working_set_size = 2 * l0_norm(x, d);
@@ -559,22 +559,26 @@ namespace BlitzL1
       if (working_set_size > prioritized_features.size())
         working_set_size = prioritized_features.size();
 
+      sort(
+        prioritized_features.begin(),
+        prioritized_features.end()
+      );
+
       // log size and ws
-      cout << "threshold " << thresh << endl;
-      cout << "ws size: " << working_set_size << endl;
-      cout << "ws:";
-      for(int j=0; j < working_set_size; j++) {
-        cout << " " << prioritized_features[j];
-      }
-      cout << endl;
+      // cout << "ws size: " << working_set_size << endl;
+      // cout << "ws:";
+      // for(int j=0; j < working_set_size; j++) {
+      //   cout << " " << prioritized_features[j];
+      // }
+      // cout << endl;
 
       // Solve subproblem:
       value_t epsilon = 0.3;
-      // int counter = 0;
+      int n_epochs = 0;
       reset_prox_newton_variables();
       while (true)
       {
-        //counter += 1;
+        n_epochs += 1;
         value_t last_subproblem_obj = primal_obj;
         theta_scale = run_prox_newton_iteration(
             x, intercept, lambda, loss_function, data);
@@ -583,6 +587,12 @@ namespace BlitzL1
         l1_penalty = lambda * l1_norm(x, d);
         primal_obj = primal_loss + l1_penalty;
         value_t subprob_dual_obj = loss_function->dual_obj(theta, data, theta_scale);
+
+        if (verbose)
+          cout << "|—— Epoch: " << n_epochs
+             // << " Time: " << elapsed_time
+               << " Objective: " << primal_obj
+               << " Duality gap: " << primal_obj - dual_obj << endl;
 
         value_t subprob_duality_gap = primal_obj - subprob_dual_obj;
         if (subprob_duality_gap < epsilon * (primal_obj - dual_obj))
@@ -605,7 +615,7 @@ namespace BlitzL1
       timer.pause_timing();
       if (verbose)
         cout << "Iter: " << itr_counter
-             << " Time: " << elapsed_time
+             // << " Time: " << elapsed_time
              << " Objective: " << primal_obj
              << " Duality gap: " << duality_gap
              << " Features left: " << prioritized_features.size() << endl;
