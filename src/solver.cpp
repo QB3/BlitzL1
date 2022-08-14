@@ -15,6 +15,36 @@ using std::min;
 using std::swap;
 using std::vector;
 
+/* ==================================================================================
+  
+  Blitz Log reg in a nutshell 
+  ===========================
+
+  problems
+  --------
+  solve the prob with y, A (response, design matrix) 
+
+  \min_x \sum_i \log(1 + e^(-y_i (Ax)_i)) + \lambda \sum_j |x_j|
+  
+
+  code notations
+  ---------------
+  - label == y (response)
+  - Ax == design_matrix @ coefs
+  - aux_dual[i] == e^(-y_i (Ax)_i)
+  - theta == grad vector (first derivatives): -label[i] * aux_dual[i] / (1 + aux_dual[i])
+  - H == hessian == diag matrix  (second derivatives)
+
+
+  Later notation
+  --------------
+  \min_x \sum_i \log(1 + e^(-y_i (Ax)_i)) + \lambda \sum_j |x_j|
+
+  <==>
+
+  \min_x F(A x) + \lambda || x ||_1
+===================================================================================== */
+
 namespace BlitzL1
 {
 
@@ -148,7 +178,7 @@ namespace BlitzL1
       for (size_t ind = 0; ind < working_set_size; ++ind)
       {
         size_t j = prioritized_features[ind];
-        prox_newton_grad_cache[ind] = data->get_column(j)->inner_product(theta);
+        prox_newton_grad_cache[ind] = data->get_column(j)->inner_product(theta);  // X[:, j].T @ grad 
       }
     }
     else
@@ -160,16 +190,16 @@ namespace BlitzL1
     for (int cd_itr = 0; cd_itr < max_cd_itr; ++cd_itr)
     {
 
-      // Shuffle indices:
-      random_shuffle(rand_permutation.begin(), rand_permutation.end());
-      for (size_t rp_ind = 0; rp_ind < working_set_size; ++rp_ind)
-      {
-        size_t new_index = rand_permutation[rp_ind];
-        swap(prioritized_features[rp_ind], prioritized_features[new_index]);
-        swap(Delta_x[rp_ind], Delta_x[new_index]);
-        swap(prox_newton_grad_cache[rp_ind], prox_newton_grad_cache[new_index]);
-        swap(hess_cache[rp_ind], hess_cache[new_index]);
-      }
+      // // Shuffle indices:
+      // random_shuffle(rand_permutation.begin(), rand_permutation.end());
+      // for (size_t rp_ind = 0; rp_ind < working_set_size; ++rp_ind)
+      // {
+      //   size_t new_index = rand_permutation[rp_ind];
+      //   swap(prioritized_features[rp_ind], prioritized_features[new_index]);
+      //   swap(Delta_x[rp_ind], Delta_x[new_index]);
+      //   swap(prox_newton_grad_cache[rp_ind], prox_newton_grad_cache[new_index]);
+      //   swap(hess_cache[rp_ind], hess_cache[new_index]);
+      // }
 
       // Compute newton direction using coordinate descent:
       value_t sum_sq_hess_diff = 0.0;
@@ -208,17 +238,46 @@ namespace BlitzL1
         add_scaler(A_Delta_x, diff);
       }
 
+      /*
+        criterion based on a fixed point
+        Q: Why multiply by hess ** 2 (cf. L228)
+      */
       if (sum_sq_hess_diff < prox_newton_epsilon && cd_itr + 1 >= MIN_PROX_NEWTON_CD_ITR)
       {
+        // cout << "  |—— cd iter: " << cd_itr + 1;
         break;
       }
     }
 
+    // cout << "  |—— max cd iter: " << max_cd_itr << endl;
     // Apply update with backtracking:
     value_t t = 1.0;
     value_t last_t = 0.0;
+    // int count_backtack = 0;
     for (int backtrack_itr = 0; backtrack_itr < MAX_BACKTRACK_ITR; ++backtrack_itr)
     {
+      // count_backtack += 1;
+      /* =====================================================================================
+      
+        update divide t by 2 until condition met:
+
+        F(A x) + \lambda || x ||_1 < F(A (x - t \Delta x)) + \lambda || x - t \Delta x ||_1
+
+        <==> (approximately)
+
+        t \nabla F A \Delta x + \lambda (|| x ||_1 - || x - t \Delta x ||_1) < 0
+
+        <==> (Blitz considers x and x - t \Delta x have the same sign)
+          
+        t \nabla F @ A \Delta x + t \lambda t  sum_sign(\Delta x) < 0
+
+        <==> (get ride of t since it positive)
+
+        subgrad_t == \nabla F @ A \Delta x + t \lambda t  sum_sign(\Delta x) 
+
+        subgrad_t < 0
+
+      ======================================================================================== */
       value_t diff_t = t - last_t;
 
       intercept += diff_t * Delta_intercept;
@@ -240,7 +299,7 @@ namespace BlitzL1
         Ax[i] += diff_t * A_Delta_x[i];
       }
 
-      loss_function->compute_dual_points(Ax, theta, aux_dual, data);
+      loss_function->compute_dual_points(Ax, theta, aux_dual, data); // compute grad at new x (stored in theta)
       subgrad_t += inner_product(A_Delta_x, theta);
 
       if (subgrad_t < 0)
@@ -253,6 +312,8 @@ namespace BlitzL1
         t *= 0.5;
       }
     }
+
+    // cout << "Backtrack iter " << count_backtack << endl;
 
     // Update intercept exactly:
     value_t delta_intercept = update_intercept(intercept, loss_function, data);
@@ -267,6 +328,18 @@ namespace BlitzL1
     }
     for (size_t ind = 0; ind < working_set_size; ++ind)
     {
+      /* =====================================================================================
+        prox_newton_grad_diff = norm(actual_grad -  approximate_grad, ord=2) ** 2
+
+        where:
+        - actual_grad = grad of datafit
+        - approximate_grad = grad of the quadratic approximation
+
+
+        Note: 
+          the more we get close to the sol the more actual_grad == approximate_grad
+
+      ======================================================================================== */
       size_t j = prioritized_features[ind];
       const Column *col = data->get_column(j);
       value_t actual_grad = col->inner_product(theta);
@@ -462,6 +535,12 @@ namespace BlitzL1
       value_t dual_obj = loss_function->dual_obj(phi, data);
       duality_gap = primal_obj - dual_obj;
 
+      // // logs primal and dual obj
+      // cout << "Iter " << iter
+      //      << " p obj " << primal_obj
+      //      << " d obj " << dual_obj   
+      //      << " gap "  << dual_obj << endl;
+
       // Determine working set size:
       working_set_size = 2 * l0_norm(x, d);
       if (working_set_size < 100)
@@ -482,11 +561,26 @@ namespace BlitzL1
       if (working_set_size > prioritized_features.size())
         working_set_size = prioritized_features.size();
 
+      // sort(
+      //   prioritized_features.begin(),
+      //   prioritized_features.end()
+      // );
+
+      // log size and ws
+      // cout << "ws size: " << working_set_size << endl;
+      // cout << "ws:";
+      // for(int j=0; j < working_set_size; j++) {
+      //   cout << " " << prioritized_features[j];
+      // }
+      // cout << endl;
+
       // Solve subproblem:
       value_t epsilon = 0.3;
+      int n_epochs = 0;
       reset_prox_newton_variables();
       while (true)
       {
+        n_epochs += 1;
         value_t last_subproblem_obj = primal_obj;
         theta_scale = run_prox_newton_iteration(
             x, intercept, lambda, loss_function, data);
@@ -496,6 +590,12 @@ namespace BlitzL1
         primal_obj = primal_loss + l1_penalty;
         value_t subprob_dual_obj = loss_function->dual_obj(theta, data, theta_scale);
 
+        if (verbose)
+          cout << "|—— Epoch: " << n_epochs
+             // << " Time: " << elapsed_time
+               << " Objective: " << primal_obj
+               << " Duality gap: " << primal_obj - dual_obj << endl;
+
         value_t subprob_duality_gap = primal_obj - subprob_dual_obj;
         if (subprob_duality_gap < epsilon * (primal_obj - dual_obj))
           break;
@@ -504,6 +604,8 @@ namespace BlitzL1
         if (primal_obj >= last_subproblem_obj)
           break;
       }
+
+      // cout << "Iter " << iter << ": n_epochs : " << counter << endl;
 
       primal_loss = loss_function->primal_loss(theta, aux_dual, data);
       l1_penalty = lambda * l1_norm(x, d);
@@ -515,7 +617,7 @@ namespace BlitzL1
       timer.pause_timing();
       if (verbose)
         cout << "Iter: " << itr_counter
-             << " Time: " << elapsed_time
+             // << " Time: " << elapsed_time
              << " Objective: " << primal_obj
              << " Duality gap: " << duality_gap
              << " Features left: " << prioritized_features.size() << endl;
