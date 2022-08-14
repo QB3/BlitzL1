@@ -18,4 +18,4 @@ blitzl1.set_tolerance(0)
 blitzl1.set_verbose(True)
 problem = blitzl1.LogRegProblem(X, y)
 
-coef_ = problem.solve(alpha, max_iter=5).x
+coef_ = problem.solve(alpha, max_iter=20).x

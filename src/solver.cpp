@@ -244,10 +244,12 @@ namespace BlitzL1
       */
       if (sum_sq_hess_diff < prox_newton_epsilon && cd_itr + 1 >= MIN_PROX_NEWTON_CD_ITR)
       {
+        // cout << "  |—— cd iter: " << cd_itr + 1;
         break;
       }
     }
 
+    // cout << "  |—— max cd iter: " << max_cd_itr << endl;
     // Apply update with backtracking:
     value_t t = 1.0;
     value_t last_t = 0.0;
@@ -559,10 +561,10 @@ namespace BlitzL1
       if (working_set_size > prioritized_features.size())
         working_set_size = prioritized_features.size();
 
-      sort(
-        prioritized_features.begin(),
-        prioritized_features.end()
-      );
+      // sort(
+      //   prioritized_features.begin(),
+      //   prioritized_features.end()
+      // );
 
       // log size and ws
       // cout << "ws size: " << working_set_size << endl;
